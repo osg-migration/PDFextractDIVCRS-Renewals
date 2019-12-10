@@ -27,6 +27,9 @@ Public Class Form1
     Dim docNumber, currentPageNumber, origPageNumber, docPageCount, StartingPage, totalPages, pageTotal As Integer
     Dim foreignAddress As Boolean
     Dim cancelledFlag As Boolean = False
+    Dim OSG As Boolean = False
+    Dim enc As Encoding = Encoding.Default
+    Dim xmlOut As XmlTextWriter
 
     Structure TextAndStyle
         Public text As String
@@ -43,10 +46,15 @@ Public Class Form1
     End Sub
 
     Private Sub Form1_Disposed(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Disposed
-        If (Environment.ExitCode = 0) And FRMW.parse("{NormalTermination}") <> "YES" Then
+        If (OSG) Then
+            If (Environment.ExitCode = 0) And FRMW.parse("{NormalTermination}") <> "YES" Then
+                cancelledFlag = True
+                Throw New Exception("Program was cancelled while executing")
+            End If
+        Else
             cancelledFlag = True
-            Throw New Exception("Program was cancelled while executing")
         End If
+
     End Sub
 
     Private Sub Form1_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
@@ -80,13 +88,28 @@ Public Class Form1
         convLog = New ConversionLog.ConversionLog("PDFextractDIVCRS - Renewals")
         DOCU = New DOCU.DOCU
 
-        FRMW.loadFrameworkApplicationConfigFile("PDFEXTRACT")
-        licenseKey = FRMW.getJOBparameter("PDFTRONLICENSELEY")
-        docuFileName = FRMW.getParameter("PDFEXTRACT.outputDOCUfile")
-        CurrentPDFFileName = FRMW.getParameter("PDFEXTRACT.inputPDFfile")
-        clientCode = FRMW.getParameter("CLIENTCODE")
-        workDir = FRMW.getParameter("WORKDIR")
-        swSLCT = New StreamWriter(FRMW.getParameter("PDFEXTRACT.OUTPUTSLCTFILE"), False, Encoding.Default)
+        If (OSG) Then
+            FRMW.loadFrameworkApplicationConfigFile("PDFEXTRACT")
+            licenseKey = FRMW.getJOBparameter("PDFTRONLICENSELEY")
+            docuFileName = FRMW.getParameter("PDFEXTRACT.outputDOCUfile")
+            CurrentPDFFileName = FRMW.getParameter("PDFEXTRACT.inputPDFfile")
+            clientCode = FRMW.getParameter("CLIENTCODE")
+            workDir = FRMW.getParameter("WORKDIR")
+            swSLCT = New StreamWriter(FRMW.getParameter("PDFEXTRACT.OUTPUTSLCTFILE"), False, Encoding.Default)
+        Else
+
+            CurrentPDFFileName = "D:\OSG\Github\PDFextractDIVCRS-Renewals\DX00002ACOMRENEW-FULLX-STDXSC4750XX1119XX_TD_J1301137.PDF"
+            clientCode = "DIVCRS"
+            licenseKey = "OSG Billing Services(osgbilling.com):ENTCPU:1::W:AMS(20140622):8E4F78C23CAFD6B962824007400DD29C15AD420D33446C5017F1E6BEF5C7"
+            docuFileName = "D:\OSG\Github\PDFextractDIVCRS-Renewals\Output\swdocu.txt"
+            'swSLCTFileName = "D:\OSG\Github\PDFextractDIVDUN\OutPut\swSLCT.txt"
+            workDir = "D:\OSG\Github\PDFextractDIVCRS-Renewals\Output"
+            xmlOut = New XmlTextWriter("D:\OSG\Github\PDFextractDIVCRS-Renewals\Output\result.xml", enc)
+            xmlOut.Formatting = Formatting.Indented
+            xmlOut.WriteStartDocument()
+            xmlOut.WriteStartElement("DOCS")
+        End If
+
 
 
         swDOCU = New StreamWriter(docuFileName, False, Encoding.Default)
@@ -97,10 +120,18 @@ Public Class Form1
         ProcessPDF()
 
         swDOCU.Flush() : swDOCU.Close()
-        swSLCT.Flush() : swSLCT.Close()
+        If (OSG) Then
+            swSLCT.Flush() : swSLCT.Close()
+        End If
         PDFNet.Terminate()
-        convLog.ZIPandCopy()
-        FRMW.StandardTermination()
+        If (OSG) Then
+            convLog.ZIPandCopy()
+            FRMW.StandardTermination()
+        Else
+            xmlOut.WriteEndDocument()
+            xmlOut.Flush() : xmlOut.Close()
+        End If
+
 
         Application.Exit()
 
@@ -127,8 +158,11 @@ Public Class Form1
             writeDOCUrecord(totalPages)
 
             status("Processing PDF page (" & origPageNumber.ToString & "); Saving Output PDF...")
-            inDoc.Save(FRMW.getParameter("PDFExtract.OutputPDFFile"), SDF.SDFDoc.SaveOptions.e_compatibility + SDF.SDFDoc.SaveOptions.e_remove_unused)
-
+            If (OSG) Then
+                inDoc.Save(FRMW.getParameter("PDFExtract.OutputPDFFile"), SDF.SDFDoc.SaveOptions.e_compatibility + SDF.SDFDoc.SaveOptions.e_remove_unused)
+            Else
+                inDoc.Save("D:\OSG\Github\PDFextractDIVCRS-Renewals\Output\updated.pdf", SDF.SDFDoc.SaveOptions.e_compatibility + SDF.SDFDoc.SaveOptions.e_remove_unused)
+            End If
         End Using
 
     End Sub
@@ -189,7 +223,9 @@ Public Class Form1
         End Select
 
         documentID = Guid.NewGuid.ToString
-        CreateSLCTentry()
+        If (OSG) Then
+            CreateSLCTentry()
+        End If
 
         'Check values
         If accountNumber = "" Then Throw New Exception(convLog.addError("Account number not found", accountNumber, "123456789", "File: " & Path.GetFileName(CurrentPDFFileName) & " " & "Page " & currentPageNumber))
@@ -198,12 +234,40 @@ Public Class Form1
         'White out address box
         WhiteOutContentBox(0.6, 0.85, 3.75, 1, , , , 1)
 
-        AdjustPagePosition(CurrentPage, 0, -0.25)
 
+        Dim newImageLocationRect As New Rect
+        newImageLocationRect.x1 = I2P(1.9)
+        newImageLocationRect.y1 = I2P(9.79)
+        newImageLocationRect.x2 = I2P(2.7)
+        newImageLocationRect.y2 = I2P(0.82)
+
+        AddExternalImage(inDoc, newImageLocationRect, "updatedLogo.png")
         docNumber += 1
+        ', rect As Rect
+    End Sub
+    Private Sub AddExternalImage(doc As PDFDoc, rect As Rect, imagePath As String)
+        Dim eb As New ElementBuilder
+        Dim writer As New ElementWriter
+        writer.Begin(CurrentPage)
+        eb.Reset() : eb.PathBegin()
+        Dim imagePathFullPath = ""
+
+        If (OSG) Then
+            imagePathFullPath = FRMW.getParameter("FRAMEWORKCLIENTPDFRESOURCESDIR") & "\" & imagePath
+        Else
+            imagePathFullPath = "D:\OSG\Github\PDFextractDIVCRS-Renewals\Output\" & imagePath
+        End If
+
+        Dim bld As ElementBuilder = New ElementBuilder
+        Dim img As Image = Image.Create(doc.GetSDFDoc(), imagePathFullPath)
+        'Add external image here
+
+        Dim element As Element = bld.CreateImage(img, rect.x1, rect.y1, rect.x2, rect.y2)
+        writer.WriteElement(element)
+        writer.WriteElement(eb.CreateTextEnd())
+        writer.End()
 
     End Sub
-
     Private Sub CreateSLCTentry()
         Dim SLCT As New SLCT.SLCT
         SLCT.documentId = documentID
@@ -245,6 +309,12 @@ Public Class Form1
     Private Sub CreateCropPage()
 
         Using cropDoc As New PDFDoc
+            Dim cropPDF As String = "" '
+            If (OSG) Then
+                cropPDF = FRMW.getParameter("WORKDIR") & "\crop.pdf"
+            Else
+                cropPDF = "D:\OSG\Github\PDFextractDIVCRS-Renewals\Output" & "\crop.pdf"
+            End If
             Dim page As Page = cropDoc.PageCreate(New Rect(0, 0, 612, 792))
             cropDoc.PageInsert(cropDoc.GetPageIterator(0), page)
             page = cropDoc.GetPage(1)
@@ -254,7 +324,7 @@ Public Class Form1
             CreateCropBox("NAME & ADDRESS", clipNA.x1, clipNA.y1, (clipNA.x2 - clipNA.x1), (clipNA.y2 - clipNA.y1), page, cropDoc)
             CreateCropBox("QESP STRING", clipQESP.x1, clipQESP.y1, (clipQESP.x2 - clipQESP.x1), (clipQESP.y2 - clipQESP.y1), page, cropDoc)
 
-            cropDoc.Save(FRMW.getParameter("WORKDIR") & "\crop.pdf", SDF.SDFDoc.SaveOptions.e_compatibility + SDF.SDFDoc.SaveOptions.e_remove_unused)
+            cropDoc.Save(cropPDF, SDF.SDFDoc.SaveOptions.e_compatibility + SDF.SDFDoc.SaveOptions.e_remove_unused)
         End Using
 
     End Sub
@@ -493,7 +563,7 @@ Public Class Form1
         DOCU.AccountNumber = accountNumber
         DOCU.DocumentID = documentID
         DOCU.ClientCode = clientCode
-        DOCU.DocumentDate = FRMW.getParameter("MM/DD/YYYY")
+        'DOCU.DocumentDate = FRMW.getParameter("MM/DD/YYYY")
         DOCU.DocumentType = "Renewal"
         DOCU.AmountDue = "0"
         DOCU.DocumentKey = ""
@@ -511,7 +581,11 @@ Public Class Form1
         End If
         DOCU.setOriginalAddress(CollectionToArray(nameAddressList, 5), 1, foreignAddress)
 
-        swDOCU.WriteLine(DOCU.GetXML)
+        If (OSG) Then
+            swDOCU.WriteLine(DOCU.GetXML)
+        Else
+            'CreateDocumentNode()
+        End If
 
     End Sub
 

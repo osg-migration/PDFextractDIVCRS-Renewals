@@ -16,3 +16,16 @@
 \\nchubby\TECHNICAL\Source\Implementation\VB64\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.xml
 \\nchubby\TECHNICAL\Source\Implementation\VB64\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.pdb
 \\nchubby\TECHNICAL\Source\Implementation\VB64\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.vbprojAssemblyReference.cache
+D:\OSG\Github\PDFextractDIVCRS-Renewals\bin\release\PDFextractDIVCRS-Renewals.exe.config
+D:\OSG\Github\PDFextractDIVCRS-Renewals\bin\release\PDFextractDIVCRS-Renewals.exe
+D:\OSG\Github\PDFextractDIVCRS-Renewals\bin\release\PDFextractDIVCRS-Renewals.pdb
+D:\OSG\Github\PDFextractDIVCRS-Renewals\bin\release\PDFextractDIVCRS-Renewals.xml
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS_Renewals.Form1.resources
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS_Renewals.Resources.resources
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.vbproj.GenerateResource.cache
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.vbproj.CoreCompileInputs.cache
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.vbproj.CopyComplete
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.exe
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.xml
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.pdb
+D:\OSG\Github\PDFextractDIVCRS-Renewals\obj\Debug\PDFextractDIVCRS-Renewals.vbprojAssemblyReference.cache
